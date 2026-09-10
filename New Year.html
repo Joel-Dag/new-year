@@ -153,36 +153,33 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+    // Helper function to create safe audio instances relative to ./audio/ folder
+    function createAudio(filename, loop = false, volume = 0.15) {
+      const audio = new Audio(`./audio/${filename}`);
+      audio.loop = loop;
+      audio.volume = volume;
+      audio.preload = 'auto';
+      audio.onerror = () => console.warn(`Audio asset missing or failed to load: ./audio/${filename}`);
+      return audio;
+    }
+
     // ---------- Background Audio Instances ----------
-    const audioDay = new Audio('./day.mp3');
-    audioDay.loop = true;
-    audioDay.volume = 0.15;
-
-    const audioNight = new Audio('./night.mp3');
-    audioNight.loop = true;
-    audioNight.volume = 0.15;
-
-    const audioFireworks = new Audio('./fireworks.mp3');
-    audioFireworks.loop = true;
-    audioFireworks.volume = 0.15;
+    const audioDay = createAudio('day.mp3', true, 0.15);
+    const audioNight = createAudio('night.mp3', true, 0.15);
+    const audioFireworks = createAudio('fireworks.mp3', true, 0.15);
 
     // ---------- Interaction Sound FX ----------
-    const soundMan = new Audio('./ahemman.mp3');
-    const soundGirl = new Audio('./ahemgirl.mp3');
-    const soundKid = new Audio('./ema.mp3');
-    const soundGoat = new Audio('./goat.mp3');
-
-    // Sheep and Chicken audio levels lowered
-    const soundSheep = new Audio('./sheep.mp3');
-    soundSheep.volume = 0.25;
-
-    const soundChicken = new Audio('./chicken.mp3');
-    soundChicken.volume = 0.20;
+    const soundMan = createAudio('ahemman.mp3');
+    const soundGirl = createAudio('ahemgirl.mp3');
+    const soundKid = createAudio('ema.mp3');
+    const soundGoat = createAudio('goat.mp3');
+    const soundSheep = createAudio('sheep.mp3', false, 0.25);
+    const soundChicken = createAudio('chicken.mp3', false, 0.20);
 
     function playSound(audio) {
       if (soundMuted) return;
       audio.currentTime = 0;
-      audio.play().catch(e => console.log('Audio playback prevented:', e));
+      audio.play().catch(e => console.log('Audio playback prevented or missing file:', e));
     }
 
     // ---------- Scene Setup ----------
