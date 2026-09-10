@@ -168,13 +168,13 @@
     const audioNight = createAudio('night.mp3', true, 0.15);
     const audioFireworks = createAudio('fireworks.mp3', true, 0.15);
 
-    // ---------- Interaction Sound FX ----------
-    const soundMan = createAudio('ahemman.mp3');
-    const soundGirl = createAudio('ahemgirl.mp3');
-    const soundKid = createAudio('ema.mp3');
-    const soundGoat = createAudio('goat.mp3');
-    const soundSheep = createAudio('sheep.mp3', false, 0.15);
-    const soundChicken = createAudio('chicken.mp3', false, 0.15);
+    // ---------- Interaction Sound FX (Volume Adjusted) ----------
+    const soundMan = createAudio('ahemman.mp3', false, 0.15);
+    const soundGirl = createAudio('ahemgirl.mp3', false, 0.15);
+    const soundKid = createAudio('ema.mp3', false, 0.35);      // Increased volume
+    const soundGoat = createAudio('goat.mp3', false, 0.15);
+    const soundSheep = createAudio('sheep.mp3', false, 0.10);    // Minimized volume
+    const soundChicken = createAudio('chicken.mp3', false, 0.08);// Minimized volume
 
     function playSound(audio) {
       if (soundMuted) return;
