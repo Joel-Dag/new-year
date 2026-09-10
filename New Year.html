@@ -153,7 +153,7 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // ---------- Audio Instances ----------
+    // ---------- Background Audio Instances ----------
     const audioDay = new Audio('./day.mp3');
     audioDay.loop = true;
     audioDay.volume = 0.15;
@@ -165,6 +165,25 @@
     const audioFireworks = new Audio('./fireworks.mp3');
     audioFireworks.loop = true;
     audioFireworks.volume = 0.15;
+
+    // ---------- Interaction Sound FX ----------
+    const soundMan = new Audio('./ahemman.mp3');
+    const soundGirl = new Audio('./ahemgirl.mp3');
+    const soundKid = new Audio('./ema.mp3');
+    const soundGoat = new Audio('./goat.mp3');
+
+    // Sheep and Chicken audio levels lowered
+    const soundSheep = new Audio('./sheep.mp3');
+    soundSheep.volume = 0.25;
+
+    const soundChicken = new Audio('./chicken.mp3');
+    soundChicken.volume = 0.20;
+
+    function playSound(audio) {
+      if (soundMuted) return;
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log('Audio playback prevented:', e));
+    }
 
     // ---------- Scene Setup ----------
     const scene = new THREE.Scene();
@@ -411,12 +430,14 @@
     father.position.set(-2.2, 0, 2);
     father.scale.setScalar(1.12);
     father.userData.baseScale = 1.12;
+    father.userData.type = 'man';
     scene.add(father);
 
     const mother = person({ female: true, skinMat: skin });
     mother.position.set(1.0, 0, 2.2);
     mother.scale.setScalar(1.05);
     mother.userData.baseScale = 1.05;
+    mother.userData.type = 'woman';
     scene.add(mother);
 
     function addShawl(p, side) {
@@ -441,6 +462,7 @@
       kid.position.set(x, y, z);
       kid.scale.setScalar(0.78);
       kid.userData.baseScale = 0.78;
+      kid.userData.type = 'kid';
       scene.add(kid);
       kids.push(kid);
     });
@@ -453,6 +475,7 @@
       g.position.set(x, 0, z);
       g.scale.setScalar(scale);
       g.userData.baseScale = scale;
+      g.userData.type = 'goat';
 
       addBox(g, [1.35, 0.72, 0.58], [0, 1.0, 0], white);
       addSphere(g, 0.43, [0.85, 1.35, 0], white, [1.0, 1.0, 0.85]);
@@ -473,6 +496,7 @@
       g.position.set(x, 0, z);
       g.scale.setScalar(scale);
       g.userData.baseScale = scale;
+      g.userData.type = 'sheep';
 
       for (let i = 0; i < 7; i++) {
         const angle = (i / 7) * Math.PI * 2;
@@ -492,6 +516,7 @@
       g.position.set(x, 0, z);
       g.scale.setScalar(scale);
       g.userData.baseScale = scale;
+      g.userData.type = 'chicken';
 
       addSphere(g, 0.38, [0, 0.48, 0], mat(0xb46a2b, 0.9), [1.15, 0.85, 0.9]);
       addSphere(g, 0.23, [0.32, 0.7, 0], white, [1, 0.9, 0.9]);
@@ -530,6 +555,15 @@
         if (clickable.includes(target)) {
           target.userData.pulse = 1.0;
           controls.target.lerp(target.position, 0.35);
+
+          // Trigger entity sound
+          const entityType = target.userData.type;
+          if (entityType === 'man') playSound(soundMan);
+          else if (entityType === 'woman') playSound(soundGirl);
+          else if (entityType === 'kid') playSound(soundKid);
+          else if (entityType === 'goat') playSound(soundGoat);
+          else if (entityType === 'sheep') playSound(soundSheep);
+          else if (entityType === 'chicken') playSound(soundChicken);
         }
       }
       ensureAudio();
@@ -719,7 +753,6 @@
           const t = performance.now() * 0.001 * animal.speed + animal.phase;
 
           if (fireworksRunning) {
-            // FIREWORKS ACTIVE: Panic & wander within a tight, controlled radius near scene
             if (!animal.panicDir) {
               const angle = Math.random() * Math.PI * 2;
               animal.panicDir = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
@@ -731,31 +764,25 @@
             animal.g.rotation.y = Math.atan2(animal.panicDir.x, animal.panicDir.y) + Math.sin(t * 8 + i) * 0.3;
             animal.g.position.y = Math.abs(Math.sin(performance.now() * 0.012 + i)) * 0.18;
 
-            // Clamped within tight, safe bounds surrounding the family scene
             animal.g.position.x = THREE.MathUtils.clamp(animal.g.position.x, -12, 15);
             animal.g.position.z = THREE.MathUtils.clamp(animal.g.position.z, -6, 12);
 
-            // Periodically redirect panic movement so they wander continuously in-place
             if (Math.random() < 0.02) {
               const angle = Math.random() * Math.PI * 2;
               animal.panicDir.set(Math.cos(angle), Math.sin(angle));
             }
           } else {
-            // FIREWORKS STOPPED: Smoothly lerp back to home base near the family
             animal.panicDir = null;
 
-            // Calculate target position based on home + subtle idle grazing offset
             const targetX = animal.home.x + Math.sin(t * 0.8 + i) * 0.6;
             const targetZ = animal.home.z + Math.cos(t * 0.6 + i * 2) * 0.4;
 
-            // Smooth return walking movement
             const walkSpeed = dt * 1.5;
             const prevPos = animal.g.position.clone();
             animal.g.position.x += (targetX - animal.g.position.x) * walkSpeed;
             animal.g.position.z += (targetZ - animal.g.position.z) * walkSpeed;
             animal.g.position.y += (0 - animal.g.position.y) * Math.min(1, dt * 4);
 
-            // Rotate smoothly towards movement direction when walking back
             const dx = animal.g.position.x - prevPos.x;
             const dz = animal.g.position.z - prevPos.z;
             if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
