@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>መልካም አዲስ አመት — 2019</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;800&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #10151b;
+      font-family: 'Noto Sans Ethiopic', sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #title {
+      margin-top: 30px;
+      text-align: center;
+      pointer-events: none;
+      text-shadow: 0 3px 18px rgba(0, 0, 0, .75);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    #title .am {
+      font-size: clamp(25px, 4vw, 60px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #ffe7a0;
+    }
+
+    #title .yr {
+      font-family: Georgia, serif;
+      font-size: clamp(58px, 10vw, 150px);
+      line-height: .9;
+      font-weight: 900;
+      color: #ffd45a;
+      letter-spacing: 8px;
+      text-shadow: 0 4px 0 #9b5c12, 0 8px 30px #000;
+    }
+
+    #hint {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .38);
+      backdrop-filter: blur(8px);
+      font-size: 13px;
+      opacity: .9;
+    }
+
+    #controls {
+      position: absolute;
+      left: 18px;
+      bottom: 42px;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      max-width: calc(50vw - 20px);
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, .25);
+      background: rgba(10, 15, 20, .65);
+      color: white;
+      border-radius: 12px;
+      padding: 9px 12px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      font-weight: 600;
+    }
+
+    #fireworks {
+      background: rgba(105, 35, 120, .72);
+      border-color: rgba(255, 210, 100, .5);
+      box-shadow: 0 0 18px rgba(255, 180, 60, .25);
+    }
+
+    #stopFireworks {
+      background: rgba(120, 30, 30, .6);
+      border-color: rgba(255, 140, 120, .4);
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, .15);
+    }
+
+    @keyframes float {
+      50% { transform: translateY(-5px); }
+    }
+
+    .credit {
+      position: absolute;
+      left: 18px;
+      bottom: 16px;
+      font-size: 11px;
+      opacity: .55;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div id="title">
+      <div class="am">መልካም አዲስ አመት</div>
+      <div class="yr">2019</div>
+    </div>
+    <div id="hint">🖱️ Drag to look around · Scroll to zoom · Click animals/people</div>
+    <div id="controls">
+      <button id="fireworks">🎆 Fireworks — 1 min</button>
+      <button id="stopFireworks">⏹ Stop Fireworks</button>
+      <button id="sound">🔊 Sound</button>
+      <button id="sun">☀️ Time</button>
+      <button id="pause">⏸ Pause</button>
+      <button id="home">⌂ Home</button>
+    </div>
+    <div class="credit">Interactive 3D Ethiopian New Year scene</div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ---------- Audio Instances ----------
+    const audioDay = new Audio('./day.mp3');
+    audioDay.loop = true;
+    audioDay.volume = 0.15;
+
+    const audioNight = new Audio('./night.mp3');
+    audioNight.loop = true;
+    audioNight.volume = 0.15;
+
+    const audioFireworks = new Audio('./fireworks.mp3');
+    audioFireworks.loop = true;
+    audioFireworks.volume = 0.15;
+
+    // ---------- Scene Setup ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x86b8df);
+    scene.fog = new THREE.FogExp2(0x9fc4dc, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 8, 23);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.minDistance = 9;
+    controls.maxDistance = 42;
+    controls.maxPolarAngle = Math.PI * 0.47;
+    controls.target.set(0, 4, 0);
+
+    const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x5d4328, 2.0);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffe3b0, 4.5);
+    sun.position.set(-12, 20, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 35;
+    sun.shadow.camera.bottom = -35;
+    scene.add(sun);
+
+    // ---------- Materials ----------
+    const mat = (color, roughness = 0.75, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+    const skinDark = mat(0x70452e, 0.72);
+    const skin = mat(0x8f5b3b, 0.7);
+    const white = mat(0xf1eee1, 0.92);
+    const white2 = mat(0xe4dfcf, 0.94);
+    const green = mat(0x126b45, 0.72);
+    const red = mat(0xb53b2f, 0.7);
+    const yellow = mat(0xf0bd2f, 0.6);
+    const black = mat(0x171717, 0.95);
+    const brown = mat(0x684027, 0.9);
+    const hair = mat(0x1a110c, 0.98);
+
+    // ---------- Helpers ----------
+    function shadowMesh(geometry, material) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function addBox(parent, size, pos, material, rot = [0, 0, 0]) {
+      const box = shadowMesh(new THREE.BoxGeometry(...size), material);
+      box.position.set(...pos);
+      box.rotation.set(...rot);
+      parent.add(box);
+      return box;
+    }
+
+    function addSphere(parent, radius, pos, material, scale = [1, 1, 1]) {
+      const sphere = shadowMesh(new THREE.SphereGeometry(radius, 24, 18), material);
+      sphere.position.set(...pos);
+      sphere.scale.set(...scale);
+      parent.add(sphere);
+      return sphere;
+    }
+
+    function addCyl(parent, r1, r2, h, pos, material, radial = 20) {
+      const cyl = shadowMesh(new THREE.CylinderGeometry(r1, r2, h, radial), material);
+      cyl.position.set(...pos);
+      parent.add(cyl);
+      return cyl;
+    }
+
+    function limb(parent, start, end, radius, material) {
+      const va = new THREE.Vector3(...start);
+      const vb = new THREE.Vector3(...end);
+      const dir = vb.clone().sub(va);
+      const cyl = shadowMesh(new THREE.CylinderGeometry(radius, radius, dir.length(), 12), material);
+      cyl.position.copy(va.clone().add(vb).multiplyScalar(0.5));
+      cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      parent.add(cyl);
+      return cyl;
+    }
+
+    // ---------- Ground & Landscape ----------
+    const ground = shadowMesh(new THREE.PlaneGeometry(180, 180), mat(0x486e35, 0.98));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.05;
+    scene.add(ground);
+
+    for (let i = 0; i < 18; i++) {
+      const hill = shadowMesh(new THREE.SphereGeometry(10 + Math.random() * 8, 32, 16), mat(0x527b45, 0.98));
+      hill.scale.y = 0.35;
+      hill.position.set((Math.random() - 0.5) * 85, -1, -35 - Math.random() * 35);
+      scene.add(hill);
+    }
+
+    for (let i = 0; i < 9; i++) {
+      const mountain = shadowMesh(new THREE.ConeGeometry(8 + Math.random() * 7, 14 + Math.random() * 9, 5), mat(0x5e716a, 1));
+      mountain.position.set(-50 + i * 13, 5, -50 - Math.random() * 15);
+      scene.add(mountain);
+    }
+
+    for (let i = 0; i < 55; i++) {
+      const stone = shadowMesh(new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.28, 0), mat(0x756c58, 1));
+      stone.position.set((Math.random() - 0.5) * 45, 0.1, (Math.random() - 0.5) * 32);
+      scene.add(stone);
+    }
+
+    // ---------- Hut ----------
+    const hut = new THREE.Group();
+    hut.position.set(-10, 0, -5);
+    scene.add(hut);
+    addBox(hut, [7, 4.7, 6], [0, 2.35, 0], mat(0x654b34, 0.98));
+
+    const roof = shadowMesh(new THREE.ConeGeometry(5.1, 3.4, 8), mat(0x3d2a1e, 1));
+    roof.scale.z = 1.05;
+    roof.position.y = 6;
+    hut.add(roof);
+
+    addBox(hut, [1.35, 2.5, 0.15], [0, 1.25, 3.03], mat(0x211b16, 1));
+    for (let y = 0.7; y < 4; y += 0.75) {
+      addBox(hut, [6.8, 0.08, 6.05], [0, y, 0], mat(0x76583b, 1));
+    }
+
+    // ---------- Trees ----------
+    function tree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      addCyl(group, 0.35, 0.48, 4, [0, 2, 0], brown);
+      const foliagePos = [[0, 5, 0], [1, 4.8, 0.4], [-1, 4.7, 0.2], [0, 5.5, 1], [-0.7, 5.2, -0.7]];
+      for (const pos of foliagePos) {
+        addSphere(group, 1.25, pos, mat(0x2f6333, 0.98), [1.2, 0.85, 1.15]);
+      }
+    }
+    tree(11, -5, 1.5);
+    tree(17, -12, 1.1);
+    tree(-18, -10, 1.35);
+    tree(21, 3, 0.85);
+
+    // ---------- Human Characters ----------
+    function person({ female = false, child = false, skinMat = skinDark } = {}) {
+      const group = new THREE.Group();
+      const s = child ? 0.72 : 1;
+
+      if (!female) {
+        addBox(group, [0.62 * s, 0.72 * s, 0.62 * s], [-0.38 * s, 0.55 * s, 0], white, [0, 0, 0.02]);
+        addBox(group, [0.62 * s, 0.72 * s, 0.62 * s], [0.38 * s, 0.55 * s, 0], white, [0, 0, -0.02]);
+        addBox(group, [0.78 * s, 0.45 * s, 0.9 * s], [-0.38 * s, 0.05 * s, 0.18 * s], black);
+        addBox(group, [0.78 * s, 0.45 * s, 0.9 * s], [0.38 * s, 0.05 * s, 0.18 * s], black);
+      } else {
+        addCyl(group, 0.9 * s, 0.62 * s, 2.8 * s, [0, 1.5 * s, 0], white, 28);
+      }
+
+      if (female) {
+        const skirt = addCyl(group, 1.25 * s, 0.75 * s, 2.7 * s, [0, 2.7 * s, 0], white, 32);
+        skirt.scale.z = 0.72;
+      } else {
+        addBox(group, [1.65 * s, 2.25 * s, 1.05 * s], [0, 2.55 * s, 0], white);
+      }
+
+      for (const x of [-0.66, 0.66]) {
+        addBox(group, [0.13 * s, 2.1 * s, 0.035 * s], [x * s, 2.55 * s, 0.55 * s], green);
+        addBox(group, [0.05 * s, 2.1 * s, 0.04 * s], [(x > 0 ? 0.72 : -0.72) * s, 2.55 * s, 0.58 * s], yellow);
+      }
+      addBox(group, [1.7 * s, 0.18 * s, 0.05 * s], [0, 3.55 * s, 0.54 * s], red);
+
+      addCyl(group, 0.22 * s, 0.22 * s, 0.35 * s, [0, 4.05 * s, 0], skinMat);
+      addSphere(group, 0.68 * s, [0, 4.65 * s, 0], skinMat, [0.9, 1.08, 0.9]);
+
+      addSphere(group, 0.73 * s, [0, 4.9 * s, -0.13 * s], hair, [0.98, 0.72, 1]);
+      if (female) {
+        for (let i = -2; i <= 2; i++) {
+          const curl = addSphere(group, 0.25 * s, [i * 0.27 * s, 4.45 * s, -0.48 * s], hair, [1, 1.6, 1]);
+          curl.rotation.z = i * 0.12;
+        }
+        addBox(group, [0.16 * s, 0.16 * s, 0.16 * s], [0, 4.7 * s, 0.61 * s], yellow);
+      }
+
+      for (const x of [-0.22, 0.22]) {
+        addSphere(group, 0.055 * s, [x * s, 4.72 * s, 0.61 * s], black);
+        addSphere(group, 0.018 * s, [x * s - 0.012, 4.74 * s, 0.655 * s], white);
+        const brow = addBox(group, [0.22 * s, 0.045 * s, 0.05 * s], [x * s, 4.82 * s, 0.6 * s], hair);
+        brow.rotation.z = x > 0 ? -0.12 : 0.12;
+      }
+
+      for (const x of [-0.7, 0.7]) {
+        addSphere(group, 0.1 * s, [x * s, 4.65 * s, 0], skinMat, [0.75, 1.3, 0.85]);
+      }
+
+      const shoulderY = 3.35 * s;
+      const upperLen = 0.78 * s;
+      const forearmLen = 0.72 * s;
+      const arms = [];
+
+      for (const side of [-1, 1]) {
+        const shoulder = new THREE.Group();
+        shoulder.position.set(side * 0.88 * s, shoulderY, 0.1 * s);
+        shoulder.rotation.set(-0.2, 0, side * -0.12);
+        group.add(shoulder);
+
+        const upperArm = shadowMesh(new THREE.CylinderGeometry(0.14 * s, 0.12 * s, upperLen, 10), skinMat);
+        upperArm.position.set(0, -upperLen / 2, 0);
+        shoulder.add(upperArm);
+
+        const elbow = new THREE.Group();
+        elbow.position.set(0, -upperLen, 0);
+        elbow.rotation.x = -0.3;
+        shoulder.add(elbow);
+
+        const forearm = shadowMesh(new THREE.CylinderGeometry(0.12 * s, 0.1 * s, forearmLen, 10), skinMat);
+        forearm.position.set(0, -forearmLen / 2, 0);
+        elbow.add(forearm);
+
+        addSphere(elbow, 0.14 * s, [0, -forearmLen, 0], skinMat, [0.9, 1, 0.9]);
+        arms.push({ 
+          shoulder, 
+          elbow, 
+          restShoulder: { x: -0.2, z: side * -0.12 }, 
+          restElbow: -0.3, 
+          side 
+        });
+      }
+
+      group.userData.arms = arms;
+      return group;
+    }
+
+    const father = person({ female: false, skinMat: skinDark });
+    father.position.set(-2.2, 0, 2);
+    father.scale.setScalar(1.12);
+    father.userData.baseScale = 1.12;
+    scene.add(father);
+
+    const mother = person({ female: true, skinMat: skin });
+    mother.position.set(1.0, 0, 2.2);
+    mother.scale.setScalar(1.05);
+    mother.userData.baseScale = 1.05;
+    scene.add(mother);
+
+    function addShawl(p, side) {
+      addBox(p, [1.15, 0.14, 1.45], [side * 0.52, 3.1, 0.25], white2, [0, side * 0.05, side * 0.15]);
+      addBox(p, [0.12, 1.7, 0.08], [side * 0.85, 2.55, 0.6], green);
+      for (let y = 1.85; y < 3.35; y += 0.32) {
+        addBox(p, [0.14, 0.06, 0.09], [side * 0.86, y, 0.66], yellow);
+      }
+    }
+    addShawl(father, -1);
+    addShawl(mother, 1);
+
+    const kids = [];
+    const kidConfigs = [
+      [-1.65, 0.25, 3.3, true],
+      [0, -0.05, 3.65, false],
+      [1.65, 0.25, 3.3, true]
+    ];
+
+    kidConfigs.forEach(([x, y, z, isFemale], i) => {
+      const kid = person({ female: isFemale, child: true, skinMat: i === 1 ? skinDark : skin });
+      kid.position.set(x, y, z);
+      kid.scale.setScalar(0.78);
+      kid.userData.baseScale = 0.78;
+      scene.add(kid);
+      kids.push(kid);
+    });
+
+    // ---------- Animals ----------
+    const animals = [];
+
+    function goat(x, z, scale = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+      g.userData.baseScale = scale;
+
+      addBox(g, [1.35, 0.72, 0.58], [0, 1.0, 0], white);
+      addSphere(g, 0.43, [0.85, 1.35, 0], white, [1.0, 1.0, 0.85]);
+      addSphere(g, 0.12, [1.1, 1.55, 0.28], black);
+      addSphere(g, 0.12, [1.1, 1.55, -0.28], black);
+      limb(g, [-0.48, 1, 0.2], [-0.48, 0.18, 0.2], 0.09, black);
+      limb(g, [0.48, 1, 0.2], [0.48, 0.18, 0.2], 0.09, black);
+      for (const z2 of [-0.22, 0.22]) {
+        limb(g, [0.92, 1.62, z2], [1.02, 2.0, z2], 0.045, yellow);
+      }
+
+      scene.add(g);
+      animals.push({ g, type: 'goat', home: new THREE.Vector3(x, 0, z), speed: 0.25 + Math.random() * 0.18, phase: Math.random() * 10 });
+    }
+
+    function sheep(x, z, scale = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+      g.userData.baseScale = scale;
+
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        addSphere(g, 0.58, [Math.cos(angle) * 0.5, 0.95, Math.sin(angle) * 0.35], white, [1, 0.95, 0.9]);
+      }
+      addSphere(g, 0.38, [0.8, 1.15, 0], mat(0x3b3029, 0.95), [1.05, 1, 0.8]);
+      for (const zz of [-0.2, 0.2]) {
+        limb(g, [-0.35, 0.8, zz], [-0.35, 0.18, zz], 0.075, black);
+      }
+
+      scene.add(g);
+      animals.push({ g, type: 'sheep', home: new THREE.Vector3(x, 0, z), speed: 0.18 + Math.random() * 0.15, phase: Math.random() * 10 });
+    }
+
+    function chicken(x, z, scale = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+      g.userData.baseScale = scale;
+
+      addSphere(g, 0.38, [0, 0.48, 0], mat(0xb46a2b, 0.9), [1.15, 0.85, 0.9]);
+      addSphere(g, 0.23, [0.32, 0.7, 0], white, [1, 0.9, 0.9]);
+      addSphere(g, 0.055, [0.43, 0.75, 0.2], black);
+      const beak = addCyl(g, 0.06, 0.01, 0.16, [0.62, 0.68, 0], yellow, 8);
+      beak.rotation.z = Math.PI / 2;
+      addSphere(g, 0.08, [0.36, 0.93, 0], red, [1, 0.8, 0.7]);
+      for (const zz of [-0.12, 0.12]) {
+        limb(g, [0, 0.32, zz], [0.05, 0.08, zz], 0.035, yellow);
+      }
+
+      scene.add(g);
+      animals.push({ g, type: 'chicken', home: new THREE.Vector3(x, 0, z), speed: 0.32 + Math.random() * 0.28, phase: Math.random() * 10 });
+    }
+
+    for (let i = 0; i < 5; i++) goat(6 + Math.random() * 9, -1 + Math.random() * 9, 0.75 + Math.random() * 0.25);
+    for (let i = 0; i < 4; i++) sheep(9 + Math.random() * 10, 7 + Math.random() * 5, 0.8 + Math.random() * 0.22);
+    for (let i = 0; i < 8; i++) chicken(-1 + Math.random() * 17, 6 + Math.random() * 10, 0.5 + Math.random() * 0.3);
+
+    // ---------- Click Interaction ----------
+    const clickable = [father, mother, ...kids, ...animals.map(a => a.g)];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    renderer.domElement.addEventListener('pointerdown', event => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const hit = raycaster.intersectObjects(clickable, true)[0];
+      if (hit) {
+        let target = hit.object;
+        while (target.parent && !clickable.includes(target)) {
+          target = target.parent;
+        }
+        if (clickable.includes(target)) {
+          target.userData.pulse = 1.0;
+          controls.target.lerp(target.position, 0.35);
+        }
+      }
+      ensureAudio();
+    });
+
+    // ---------- Audio Logic ----------
+    let soundMuted = false;
+    let audioInitialized = false;
+
+    function ensureAudio() {
+      if (audioInitialized) return;
+      audioInitialized = true;
+
+      if (!night) {
+        audioDay.play().catch(e => console.log('Autoplay deferred:', e));
+      } else {
+        audioNight.play().catch(e => console.log('Autoplay deferred:', e));
+      }
+      document.getElementById('sound').textContent = '🔊 Sound on';
+    }
+
+    let fireworksRunning = false;
+    let fireworksEnd = 0;
+    let fireworksTimer = 0;
+
+    const fireworkGroup = new THREE.Group();
+    scene.add(fireworkGroup);
+
+    function makeFirework() {
+      const colors = [0xff3b30, 0xffd60a, 0x32d74b, 0x64d2ff, 0xbf5af2, 0xff9f0a, 0xffffff];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const group = new THREE.Group();
+
+      const origin = new THREE.Vector3((Math.random() - 0.5) * 20, 5 + Math.random() * 5, (Math.random() - 0.5) * 8 - 2);
+      const target = origin.clone();
+      target.y = 10 + Math.random() * 7;
+      target.x += (Math.random() - 0.5) * 4;
+
+      const trail = shadowMesh(new THREE.SphereGeometry(0.055, 8, 8), new THREE.MeshBasicMaterial({ color }));
+      trail.position.copy(origin);
+      group.add(trail);
+      fireworkGroup.add(group);
+
+      const start = performance.now();
+      const flightDuration = 650;
+
+      function fly(now) {
+        const progress = Math.min((now - start) / flightDuration, 1);
+        trail.position.lerpVectors(origin, target, progress);
+        if (progress < 1) {
+          requestAnimationFrame(fly);
+        } else {
+          explode(target, color);
+        }
+      }
+      requestAnimationFrame(fly);
+    }
+
+    function explode(position, color) {
+      const count = 95;
+      const particles = [];
+
+      for (let i = 0; i < count; i++) {
+        const vel = new THREE.Vector3().randomDirection();
+        vel.multiplyScalar(2.0 + Math.random() * 3.7);
+        particles.push({
+          p: position.clone(),
+          v: vel,
+          life: 1,
+          size: 0.055 + Math.random() * 0.065
+        });
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      const posArray = new Float32Array(count * 3);
+      geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+      const material = new THREE.PointsMaterial({
+        color,
+        size: 0.14,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const points = new THREE.Points(geometry, material);
+      fireworkGroup.add(points);
+      const start = performance.now();
+
+      function animateExplosion(now) {
+        const elapsed = (now - start) / 1000;
+        const positions = geometry.attributes.position.array;
+
+        for (let i = 0; i < count; i++) {
+          const particle = particles[i];
+          particle.life = Math.max(0, 1 - elapsed / 2.0);
+          particle.v.y -= 2.4 / 60;
+          particle.p.addScaledVector(particle.v, 1 / 60);
+
+          positions[i * 3] = particle.p.x;
+          positions[i * 3 + 1] = particle.p.y;
+          positions[i * 3 + 2] = particle.p.z;
+        }
+
+        geometry.attributes.position.needsUpdate = true;
+        material.opacity = Math.max(0, 1 - elapsed / 2);
+
+        if (elapsed < 2.05) {
+          requestAnimationFrame(animateExplosion);
+        } else {
+          fireworkGroup.remove(points);
+          geometry.dispose();
+          material.dispose();
+        }
+      }
+      requestAnimationFrame(animateExplosion);
+    }
+
+    function startFireworks() {
+      ensureAudio();
+      fireworksRunning = true;
+      fireworksEnd = performance.now() + 60000;
+      clearTimeout(fireworksTimer);
+      document.getElementById('fireworks').textContent = '🎆 Fireworks running…';
+
+      if (!soundMuted) {
+        audioFireworks.currentTime = 0;
+        audioFireworks.play().catch(e => console.warn(e));
+      }
+
+      function schedule() {
+        if (!fireworksRunning) return;
+        if (performance.now() >= fireworksEnd) {
+          stopFireworks();
+          return;
+        }
+        makeFirework();
+        fireworksTimer = setTimeout(schedule, 220 + Math.random() * 700);
+      }
+      schedule();
+    }
+
+    function stopFireworks() {
+      fireworksRunning = false;
+      clearTimeout(fireworksTimer);
+      document.getElementById('fireworks').textContent = '🎆 Fireworks — 1 min';
+
+      audioFireworks.pause();
+      audioFireworks.currentTime = 0;
+    }
+
+    document.getElementById('fireworks').onclick = startFireworks;
+    document.getElementById('stopFireworks').onclick = stopFireworks;
+
+    document.getElementById('sound').onclick = () => {
+      ensureAudio();
+      soundMuted = !soundMuted;
+
+      if (soundMuted) {
+        audioDay.pause();
+        audioNight.pause();
+        audioFireworks.pause();
+        document.getElementById('sound').textContent = '🔇 Sound off';
+      } else {
+        if (!night) audioDay.play();
+        else audioNight.play();
+
+        if (fireworksRunning) {
+          audioFireworks.play();
+        }
+        document.getElementById('sound').textContent = '🔊 Sound on';
+      }
+    };
+
+    // ---------- Animation Loop ----------
+    let paused = false;
+    let night = false;
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      if (!paused) {
+        animals.forEach((animal, i) => {
+          const t = performance.now() * 0.001 * animal.speed + animal.phase;
+
+          if (fireworksRunning) {
+            // FIREWORKS ACTIVE: Panic & wander within a tight, controlled radius near scene
+            if (!animal.panicDir) {
+              const angle = Math.random() * Math.PI * 2;
+              animal.panicDir = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+              animal.panicSpeed = 1.8 + Math.random() * 1.5;
+            }
+
+            animal.g.position.x += animal.panicDir.x * dt * animal.panicSpeed + Math.sin(t * 7 + i) * dt * 0.4;
+            animal.g.position.z += animal.panicDir.y * dt * animal.panicSpeed + Math.cos(t * 6 + i * 2) * dt * 0.4;
+            animal.g.rotation.y = Math.atan2(animal.panicDir.x, animal.panicDir.y) + Math.sin(t * 8 + i) * 0.3;
+            animal.g.position.y = Math.abs(Math.sin(performance.now() * 0.012 + i)) * 0.18;
+
+            // Clamped within tight, safe bounds surrounding the family scene
+            animal.g.position.x = THREE.MathUtils.clamp(animal.g.position.x, -12, 15);
+            animal.g.position.z = THREE.MathUtils.clamp(animal.g.position.z, -6, 12);
+
+            // Periodically redirect panic movement so they wander continuously in-place
+            if (Math.random() < 0.02) {
+              const angle = Math.random() * Math.PI * 2;
+              animal.panicDir.set(Math.cos(angle), Math.sin(angle));
+            }
+          } else {
+            // FIREWORKS STOPPED: Smoothly lerp back to home base near the family
+            animal.panicDir = null;
+
+            // Calculate target position based on home + subtle idle grazing offset
+            const targetX = animal.home.x + Math.sin(t * 0.8 + i) * 0.6;
+            const targetZ = animal.home.z + Math.cos(t * 0.6 + i * 2) * 0.4;
+
+            // Smooth return walking movement
+            const walkSpeed = dt * 1.5;
+            const prevPos = animal.g.position.clone();
+            animal.g.position.x += (targetX - animal.g.position.x) * walkSpeed;
+            animal.g.position.z += (targetZ - animal.g.position.z) * walkSpeed;
+            animal.g.position.y += (0 - animal.g.position.y) * Math.min(1, dt * 4);
+
+            // Rotate smoothly towards movement direction when walking back
+            const dx = animal.g.position.x - prevPos.x;
+            const dz = animal.g.position.z - prevPos.z;
+            if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+              const targetRot = Math.atan2(dx, dz);
+              animal.g.rotation.y += (targetRot - animal.g.rotation.y) * Math.min(1, dt * 5);
+            }
+          }
+
+          const baseScale = animal.g.userData.baseScale || 1;
+          if (animal.g.userData.pulse > 0) {
+            animal.g.userData.pulse -= dt * 3;
+            if (animal.g.userData.pulse < 0) animal.g.userData.pulse = 0;
+            const bounce = 1 + Math.sin(animal.g.userData.pulse * Math.PI) * 0.15;
+            animal.g.scale.setScalar(baseScale * bounce);
+          } else {
+            animal.g.scale.setScalar(baseScale);
+          }
+        });
+
+        [father, mother, ...kids].forEach((personObj, i) => {
+          personObj.position.y += Math.sin(performance.now() * 0.0015 + i) * 0.0007;
+
+          const baseScale = personObj.userData.baseScale || 1;
+          if (personObj.userData.pulse > 0) {
+            personObj.userData.pulse -= dt * 3;
+            if (personObj.userData.pulse < 0) personObj.userData.pulse = 0;
+            const bounce = 1 + Math.sin(personObj.userData.pulse * Math.PI) * 0.15;
+            personObj.scale.setScalar(baseScale * bounce);
+          } else {
+            personObj.scale.setScalar(baseScale);
+          }
+
+          if (personObj.userData.arms) {
+            const time = performance.now() * 0.001;
+            personObj.userData.arms.forEach((arm, j) => {
+              const phase = i * 1.6 + j * Math.PI;
+              if (fireworksRunning) {
+                const targetX = -1.8 + Math.sin(time * 4.2 + phase) * 0.3;
+                const targetZ = arm.restShoulder.z + Math.sin(time * 3 + phase) * 0.2;
+                const targetElbow = -0.4 - Math.abs(Math.sin(time * 5 + phase)) * 0.4;
+
+                arm.shoulder.rotation.x += (targetX - arm.shoulder.rotation.x) * Math.min(1, dt * 6);
+                arm.shoulder.rotation.z += (targetZ - arm.shoulder.rotation.z) * Math.min(1, dt * 6);
+                arm.elbow.rotation.x += (targetElbow - arm.elbow.rotation.x) * Math.min(1, dt * 6);
+              } else {
+                arm.shoulder.rotation.x += (arm.restShoulder.x - arm.shoulder.rotation.x) * Math.min(1, dt * 3);
+                arm.shoulder.rotation.z += (arm.restShoulder.z - arm.shoulder.rotation.z) * Math.min(1, dt * 3);
+                arm.elbow.rotation.x += (arm.restElbow - arm.elbow.rotation.x) * Math.min(1, dt * 3);
+              }
+            });
+          }
+        });
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---------- Controls Handlers ----------
+    document.getElementById('pause').onclick = () => {
+      paused = !paused;
+      document.getElementById('pause').textContent = paused ? '▶ Play' : '⏸ Pause';
+    };
+
+    document.getElementById('home').onclick = () => {
+      camera.position.set(0, 8, 23);
+      controls.target.set(0, 4, 0);
+    };
+
+    document.getElementById('sun').onclick = () => {
+      ensureAudio();
+      night = !night;
+
+      if (night) {
+        scene.background.set(0x101a35);
+        scene.fog.color.set(0x25304d);
+        hemi.intensity = 0.65;
+        sun.intensity = 1.4;
+        sun.color.set(0x9ab9ff);
+        document.getElementById('sun').textContent = '🌙 Day';
+
+        if (!soundMuted) {
+          audioDay.pause();
+          audioNight.currentTime = 0;
+          audioNight.play().catch(e => console.warn(e));
+        }
+      } else {
+        scene.background.set(0x86b8df);
+        scene.fog.color.set(0x9fc4dc);
+        hemi.intensity = 2.0;
+        sun.intensity = 4.5;
+        sun.color.set(0xffe3b0);
+        document.getElementById('sun').textContent = '☀️ Time';
+
+        if (!soundMuted) {
+          audioNight.pause();
+          audioDay.currentTime = 0;
+          audioDay.play().catch(e => console.warn(e));
+        }
+      }
+    };
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
