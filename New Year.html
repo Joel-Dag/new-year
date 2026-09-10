@@ -153,13 +153,13 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // Helper function to create safe audio instances relative to ./audio/ folder
+    // Helper function to create safe audio instances relative to ./assets/ folder
     function createAudio(filename, loop = false, volume = 0.15) {
-      const audio = new Audio(`./audio/${filename}`);
+      const audio = new Audio(`./assets/${filename}`);
       audio.loop = loop;
       audio.volume = volume;
       audio.preload = 'auto';
-      audio.onerror = () => console.warn(`Audio asset missing or failed to load: ./audio/${filename}`);
+      audio.onerror = () => console.warn(`Audio asset missing or failed to load: ./assets/${filename}`);
       return audio;
     }
 
